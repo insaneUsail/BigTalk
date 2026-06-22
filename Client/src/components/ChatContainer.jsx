@@ -4,7 +4,7 @@ import { formatMessageTime } from "../library/utils";
 import { ChatContext } from "../../context/ChatContext";
 import { AuthContext } from "../../context/AuthContext";
 
-const ChatContainer = ({ selectedUser, setSelectedUser }) => {
+const ChatContainer = ({ selectedUser, setSelectedUser, setShowInfo }) => {
   const scrollEnd = useRef();
   const fileInputRef = useRef();
 
@@ -15,28 +15,19 @@ const ChatContainer = ({ selectedUser, setSelectedUser }) => {
   const { authUser, onlineUsers } = useContext(AuthContext);
 
   useEffect(() => {
-    if (selectedUser?._id) {
-      getMessages(selectedUser._id);
-    }
+    if (selectedUser?._id) getMessages(selectedUser._id);
   }, [selectedUser]);
 
   useEffect(() => {
-    if (scrollEnd.current) {
-      scrollEnd.current.scrollIntoView({ behavior: "smooth" });
-    }
+    scrollEnd.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-
     if (!file) return;
 
     const reader = new FileReader();
-
-    reader.onloadend = () => {
-      setSelectedImage(reader.result);
-    };
-
+    reader.onloadend = () => setSelectedImage(reader.result);
     reader.readAsDataURL(file);
   };
 
@@ -44,137 +35,145 @@ const ChatContainer = ({ selectedUser, setSelectedUser }) => {
     if (!input.trim() && !selectedImage) return;
 
     await sendMessage(selectedUser._id, {
-  text: input.trim(),
-  image: selectedImage,
-});
+      text: input.trim(),
+      image: selectedImage,
+    });
 
     setInput("");
     setSelectedImage(null);
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      handleSendMessage();
-    }
-  };
+  const isOnline = selectedUser && onlineUsers.includes(selectedUser._id);
 
-  return selectedUser ? (
-    <div className="h-full overflow-hidden relative backdrop-blur-lg">
-      {/* Header */}
-      <div className="flex items-center gap-3 py-3 mx-4 border-b border-stone-500">
-        <img
-          src={selectedUser?.profilePic || assets.avatar_icon}
-          className="w-10 h-10 rounded-full object-cover"
-          alt=""
-        />
-
-        <p className="flex-1 text-lg text-white flex items-center gap-2">
-          {selectedUser?.fullName}
-          {onlineUsers.includes(selectedUser._id) && (
-            <span className="top-5 w-2 h-2 rounded-full bg-green-500"></span>
-          )}
+  if (!selectedUser) {
+    return (
+      <div className="hidden h-full flex-col items-center justify-center bg-[#0f172a]/50 px-6 text-center md:flex">
+        <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-violet-500/10">
+          <img src={assets.logo_icon} className="w-12" alt="" />
+        </div>
+        <h2 className="mt-6 text-2xl font-bold">Welcome to BigTalk</h2>
+        <p className="mt-2 max-w-sm text-sm text-gray-400">
+          Select a conversation from the sidebar and start chatting instantly.
         </p>
+      </div>
+    );
+  }
 
-        <img
+  return (
+    <div className="relative flex h-full flex-col bg-[#0f172a]/70">
+      <header className="flex h-16 items-center gap-3 border-b border-white/10 px-4">
+        <button
           onClick={() => setSelectedUser(null)}
-          src={assets.arrow_icon}
-          className="md:hidden max-w-7 cursor-pointer"
-          alt=""
-        />
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 md:hidden"
+        >
+          <img src={assets.arrow_icon} className="w-5" alt="Back" />
+        </button>
 
-        <img src={assets.help_icon} className="max-md:hidden max-w-5" alt="" />
-      </div>
-
-      {/* Chat messages */}
-      <div className="flex flex-col h-[calc(100%-120px)] overflow-y-scroll p-3 pb-6">
-        {messages.length === 0 && (
-          <p className="text-center text-gray-400 text-sm mt-5">
-            No messages yet. Start the conversation.
-          </p>
-        )}
-
-        {messages.map((msg) => {
-          const isMine = msg.senderId === authUser?._id;
-
-          return (
-            <div
-              key={msg._id}
-              className={`flex items-end gap-2 ${
-                isMine ? "justify-end" : "justify-start"
-              }`}
-            >
-              {msg.image ? (
-                <img
-                  src={msg.image}
-                  className="max-w-[230px] border border-gray-700 rounded-lg overflow-hidden mb-8"
-                  alt=""
-                />
-              ) : (
-                <p
-                  className={`p-2 max-w-[220px] md:text-sm font-light rounded-lg mb-8 break-all text-white ${
-                    isMine
-                      ? "bg-violet-500/30 rounded-br-none"
-                      : "bg-gray-500/30 rounded-bl-none"
-                  }`}
-                >
-                  {msg.text}
-                </p>
-              )}
-
-              <div className="text-center text-xs">
-                <img
-                  src={
-                    isMine
-                      ? authUser?.profilePic || assets.avatar_icon
-                      : selectedUser?.profilePic || assets.avatar_icon
-                  }
-                  className="w-7 h-7 rounded-full object-cover"
-                  alt=""
-                />
-                <p className="text-gray-500">
-                  {formatMessageTime(msg.createdAt)}
-                </p>
-              </div>
-            </div>
-          );
-        })}
-
-        <div ref={scrollEnd}></div>
-      </div>
-
-      {/* Selected image preview */}
-      {selectedImage && (
-        <div className="absolute bottom-16 left-3">
+        <div className="relative">
           <img
-            src={selectedImage}
-            className="w-20 h-20 object-cover rounded-lg border border-gray-500"
-            alt=""
+            src={selectedUser.profilePic || assets.avatar_icon}
+            className="h-11 w-11 rounded-full object-cover"
+            alt={selectedUser.fullName}
           />
-          <button
-            onClick={() => setSelectedImage(null)}
-            className="text-xs text-white bg-red-500 px-2 py-1 rounded mt-1"
-          >
-            Remove
-          </button>
+          <span
+            className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#0f172a] ${
+              isOnline ? "bg-emerald-400" : "bg-gray-500"
+            }`}
+          />
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-semibold">{selectedUser.fullName}</p>
+          <p className="text-xs text-gray-400">{isOnline ? "Online" : "Offline"}</p>
+        </div>
+
+        <button className="hidden h-10 w-10 items-center justify-center rounded-full bg-white/5 text-lg hover:bg-white/10 sm:flex">
+          📞
+        </button>
+
+        <button
+          onClick={() => setShowInfo?.(true)}
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 hover:bg-white/10 lg:hidden"
+        >
+          ℹ️
+        </button>
+      </header>
+
+      <main className="flex-1 overflow-y-auto px-3 py-4 sm:px-5">
+        {messages.length === 0 ? (
+          <div className="flex h-full flex-col items-center justify-center text-center">
+            <div className="rounded-3xl bg-white/5 p-5 text-4xl">👋</div>
+            <h3 className="mt-4 text-lg font-bold">No messages yet</h3>
+            <p className="mt-1 text-sm text-gray-400">Say hello to start the conversation.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {messages.map((msg) => {
+              const isMine = msg.senderId === authUser?._id;
+
+              return (
+                <article
+                  key={msg._id}
+                  className={`flex items-end gap-2 ${isMine ? "justify-end" : "justify-start"}`}
+                >
+                  {!isMine && (
+                    <img
+                      src={selectedUser.profilePic || assets.avatar_icon}
+                      className="h-8 w-8 rounded-full object-cover"
+                      alt=""
+                    />
+                  )}
+
+                  <div className={`max-w-[82%] sm:max-w-[70%] ${isMine ? "items-end" : "items-start"} flex flex-col`}>
+                    {msg.image ? (
+                      <img
+                        src={msg.image}
+                        onClick={() => window.open(msg.image)}
+                        className="max-h-72 max-w-full cursor-pointer rounded-2xl border border-white/10 object-cover"
+                        alt="Shared"
+                      />
+                    ) : (
+                      <p
+                        className={`rounded-2xl px-4 py-2 text-sm leading-relaxed shadow-lg ${
+                          isMine
+                            ? "rounded-br-md bg-gradient-to-r from-indigo-500 to-violet-600 text-white"
+                            : "rounded-bl-md bg-white/10 text-gray-100"
+                        }`}
+                      >
+                        {msg.text}
+                      </p>
+                    )}
+
+                    <div className="mt-1 flex items-center gap-1 text-[11px] text-gray-500">
+                      <span>{formatMessageTime(msg.createdAt)}</span>
+                      {isMine && <span className={msg.seen ? "text-emerald-400" : "text-gray-500"}>{msg.seen ? "✓✓" : "✓"}</span>}
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+            <div ref={scrollEnd} />
+          </div>
+        )}
+      </main>
+
+      {selectedImage && (
+        <div className="border-t border-white/10 px-4 py-2">
+          <div className="relative w-fit">
+            <img src={selectedImage} className="h-16 w-16 rounded-xl object-cover" alt="" />
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs"
+            >
+              ×
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Bottom input area */}
-      <div className="absolute bottom-0 left-0 right-0 flex items-center gap-3 p-3">
-        <div className="flex-1 flex items-center bg-gray-100/12 rounded-full">
-          <input
-            type="text"
-            placeholder="Send a message"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="flex-1 text-sm p-3 border-none rounded-lg outline-none text-white placeholder-gray-400 bg-transparent"
-          />
-
+      <footer className="border-t border-white/10 p-3 sm:p-4">
+        <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-white/5 p-2 focus-within:border-violet-400">
           <input
             type="file"
             id="image"
@@ -184,27 +183,36 @@ const ChatContainer = ({ selectedUser, setSelectedUser }) => {
             onChange={handleImageChange}
           />
 
-          <label htmlFor="image">
-            <img
-              src={assets.gallery_icon}
-              className="w-5 mr-3 cursor-pointer"
-              alt=""
-            />
+          <label
+            htmlFor="image"
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl hover:bg-white/10"
+          >
+            <img src={assets.gallery_icon} className="w-5" alt="Attach" />
           </label>
-        </div>
 
-        <img
-          onClick={handleSendMessage}
-          src={assets.send_button}
-          className="w-7 cursor-pointer"
-          alt=""
-        />
-      </div>
-    </div>
-  ) : (
-    <div className="flex flex-col items-center justify-center gap-2 text-gray-500 bg-white/10 max-md:hidden">
-      <img src={assets.logo_icon} className="max-w-16" alt="" />
-      <p className="text-lg font-medium">Chat anytime, anywhere</p>
+          <textarea
+            rows={1}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
+            placeholder="Type a message..."
+            className="max-h-24 flex-1 resize-none bg-transparent px-2 py-2 text-sm outline-none placeholder:text-gray-500"
+          />
+
+          <button
+            onClick={handleSendMessage}
+            disabled={!input.trim() && !selectedImage}
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-600 transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <img src={assets.send_button} className="w-5" alt="Send" />
+          </button>
+        </div>
+      </footer>
     </div>
   );
 };

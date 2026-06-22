@@ -1,72 +1,99 @@
-import React, { useContext } from 'react';
-import assets from '../assets/assets';
-import { AuthContext } from '../../context/AuthContext';
-import { ChatContext } from '../../context/ChatContext';
+import React, { useContext } from "react";
+import assets from "../assets/assets";
+import { AuthContext } from "../../context/AuthContext";
+import { ChatContext } from "../../context/ChatContext";
 
-const RightSidebar = ({ selectedUser }) => {
-    const { logout, onlineUsers } = useContext(AuthContext);
-    const { messages } = useContext(ChatContext);
+const RightSidebar = ({ selectedUser, onClose }) => {
+  const { logout, onlineUsers } = useContext(AuthContext);
+  const { messages } = useContext(ChatContext);
 
-    // Filter only image messages from conversation with selected user
-    const sharedMedia = messages
-        .filter((msg) => msg.image)
-        .map((msg) => msg.image);
+  if (!selectedUser) {
+    return (
+      <div className="hidden h-full items-center justify-center bg-[#0b1020]/80 p-6 text-center text-gray-500 lg:flex">
+        Select a user to view details.
+      </div>
+    );
+  }
 
-    const isOnline = onlineUsers.includes(selectedUser?._id?.toString());
+  const sharedMedia = messages.filter((msg) => msg.image).map((msg) => msg.image);
+  const isOnline = onlineUsers.includes(selectedUser?._id?.toString());
 
-    return selectedUser ? (
-        <div className='bg-gray-900/45 text-white w-full relative overflow-y-auto'>
-            {/* Profile section */}
-            <div className='pt-16 flex flex-col items-center gap-2 text-xs font-light mx-auto'>
-                <img
-                    src={selectedUser?.profilePic || assets.avatar_icon}
-                    className='w-20 aspect-square rounded-full object-cover'
-                    alt=""
-                />
-                <h1 className='px-10 text-xl font-medium mx-auto flex items-center gap-2'>
-                    {isOnline && <p className="w-2 h-2 rounded-full bg-green-500"></p>}
-                    {selectedUser.fullName}
-                </h1>
-                <p className="px-10 mx-auto text-center text-gray-400">
-                    {selectedUser.bio || "No bio yet"}
-                </p>
-            </div>
+  return (
+    <div className="flex h-full flex-col bg-[#0b1020]/90 text-white">
+      <div className="flex items-center justify-between border-b border-white/10 p-4 lg:hidden">
+        <p className="font-semibold">Profile Info</p>
+        <button onClick={onClose} className="rounded-full bg-white/10 px-3 py-1">
+          ×
+        </button>
+      </div>
 
-            <hr className='border-gray-500 mx-4 my-4' />
+      <div className="flex flex-col items-center border-b border-white/10 px-6 py-8 text-center">
+        <img
+          src={selectedUser?.profilePic || assets.avatar_icon}
+          className="h-24 w-24 rounded-full object-cover ring-4 ring-violet-500/20"
+          alt={selectedUser.fullName}
+        />
 
-            {/* Shared media section */}
-            <div className='px-5 text-xs'>
-                <p className='text-gray-300 mb-2'>Shared Media</p>
-                {sharedMedia.length > 0 ? (
-                    <div className='mt-2 max-h-[300px] overflow-y-auto grid grid-cols-2 gap-2 opacity-80'>
-                        {sharedMedia.map((url, index) => (
-                            <div
-                                key={index}
-                                onClick={() => window.open(url)}
-                                className='cursor-pointer rounded'
-                            >
-                                <img
-                                    src={url}
-                                    className='w-full h-24 object-cover rounded-md'
-                                    alt=""
-                                />
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <p className='text-gray-500 mt-2'>No media shared yet</p>
-                )}
-            </div>
+        <h2 className="mt-4 text-xl font-bold">{selectedUser.fullName}</h2>
 
-            {/* Logout button */}
-            <button
-                onClick={logout}
-                className="absolute bottom-5 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-purple-400 to-violet-600 text-white border-none text-sm font-light py-2 px-10 rounded-full cursor-pointer whitespace-nowrap"
-            >
-                Logout
-            </button>
+        <p className={`mt-1 text-xs ${isOnline ? "text-emerald-400" : "text-gray-500"}`}>
+          {isOnline ? "● Online" : "● Offline"}
+        </p>
+
+        <p className="mt-4 max-w-xs text-sm italic text-gray-400">
+          {selectedUser.bio || "No bio added yet."}
+        </p>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-5">
+        <div className="mb-5 grid grid-cols-2 gap-3">
+          <button className="rounded-2xl bg-white/5 px-4 py-3 text-sm hover:bg-white/10">
+            📞 Call
+          </button>
+          <button className="rounded-2xl bg-white/5 px-4 py-3 text-sm hover:bg-white/10">
+            🔍 Search
+          </button>
         </div>
-    ) : null;
+
+        <div>
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-sm font-semibold">Shared Media</p>
+            <p className="text-xs text-gray-500">{sharedMedia.length}</p>
+          </div>
+
+          {sharedMedia.length > 0 ? (
+            <div className="grid grid-cols-2 gap-2">
+              {sharedMedia.slice(0, 8).map((url, index) => (
+                <button
+                  key={index}
+                  onClick={() => window.open(url)}
+                  className="overflow-hidden rounded-xl border border-white/10 bg-white/5"
+                >
+                  <img src={url} className="h-24 w-full object-cover transition hover:scale-105" alt="Shared media" />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-gray-500">
+              No photos shared yet
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="border-t border-white/10 p-5">
+        <button className="mb-3 w-full rounded-2xl bg-red-500/10 px-4 py-3 text-sm text-red-300 hover:bg-red-500/20">
+          Delete Chat
+        </button>
+        <button
+          onClick={logout}
+          className="w-full rounded-2xl bg-gradient-to-r from-indigo-500 to-violet-600 px-4 py-3 text-sm font-semibold"
+        >
+          Logout
+        </button>
+      </div>
+    </div>
+  );
 };
 
 export default RightSidebar;
